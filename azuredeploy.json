@@ -19,7 +19,7 @@
     },
     "vmSku": {
       "type": "string",
-      "defaultValue": "Standard_A1_v2",
+      "defaultValue": "Standard_A2m_v2",
       "metadata": {
         "description": "Size of VMs in the VM Scale Set."
       }
@@ -40,7 +40,7 @@
     },
     "instanceCount": {
       "type": "int",
-      "defaultValue": 3,
+      "defaultValue": 1,
       "maxValue": 100,
       "minValue": 1,
       "metadata": {
@@ -118,7 +118,7 @@
     }
   },
   "variables": {
-    "vmScaleSetName": "[toLower(substring(format('vmssName{0}', uniqueString(resourceGroup().id)), 0, 9))]",
+    "vmScaleSetName": "[toLower(substring(concat(parameters('vmssName'), uniqueString(resourceGroup().id)), 0, 9))]",
     "longvmScaleSet": "[toLower(parameters('vmssName'))]",
     "addressPrefix": "10.0.0.0/16",
     "subnetPrefix": "10.0.0.0/24",
@@ -230,6 +230,10 @@
         "tier": "Standard",
         "capacity": "[parameters('instanceCount')]"
       },
+      "dependsOn": [
+                "[resourceId('Microsoft.Network/loadBalancers', variables('loadBalancerName'))]",
+                "[resourceId('Microsoft.Network/virtualNetworks', variables('virtualNetworkName'))]"
+      ],
       "properties": {
         "overprovision": true,
         "upgradePolicy": {
@@ -267,6 +271,11 @@
                           {
                             "id": "[variables('lbPoolID')]"
                           }
+                        ],
+                        "loadBalancerInboundNatPools": [
+                          {
+                            "id": "[resourceId('Microsoft.Network/loadBalancers/inboundNatPools', variables('loadBalancerName'),  variables('natPoolName'))]"
+                          }
                         ]
                       }
                     }
@@ -301,10 +310,8 @@
             ]
           }
         }
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.Network/virtualNetworks', variables('vNetName'))]"
-      ]
+      }
+      
     },
     {
       "type": "Microsoft.Network/publicIPAddresses",
@@ -353,7 +360,7 @@
             "name": "Profile1",
             "capacity": {
               "minimum": "1",
-              "maximum": "10",
+              "maximum": "3",
               "default": "1"
             },
             "rules": [
@@ -366,7 +373,7 @@
                   "timeWindow": "PT5M",
                   "timeAggregation": "Average",
                   "operator": "GreaterThan",
-                  "threshold": 50
+                  "threshold": 70
                 },
                 "scaleAction": {
                   "direction": "Increase",
